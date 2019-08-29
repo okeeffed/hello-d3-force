@@ -1,29 +1,55 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import * as d3 from 'd3';
+import { debounce } from 'debounce';
+
 // import
 
 function App() {
+  const [data, setData] = useState(initData);
   const d3Container = useRef(null);
+
+  const handleChange = debounce((value) => {
+    const newData = {};
+
+    newData.links = data.links.filter(
+      (d) => d.source.includes(value) || d.target.includes(value)
+    );
+    const nodesThatConform = [];
+    newData.links.map((d) => {
+      if (!nodesThatConform.includes(d.source)) {
+        nodesThatConform.push(d.source);
+      }
+
+      if (!nodesThatConform.includes(d.target)) {
+        nodesThatConform.push(d.target);
+      }
+    });
+    console.log('nodesThatConform', nodesThatConform);
+    newData.nodes = data.nodes.filter((d) => nodesThatConform.includes(d.id));
+    setData(newData);
+  }, 200);
+
   useEffect(() => {
-    if (d3Container.current) {
+    if (data && d3Container.current) {
       const svg = d3.select(d3Container.current);
 
-      const chart = buildChart(svg);
-      console.log(chart);
-
-      // Remove old D3 elements
       svg.exit().remove();
+
+      buildChart(svg, data);
     }
-  }, [d3Container.current]);
+  }, [data, d3Container.current]);
 
   return (
-    <svg
-      className="d3-component"
-      width={'100%'}
-      height={'100%'}
-      ref={d3Container}
-    />
+    <div>
+      <input type="text" onChange={(e) => handleChange(e.target.value)} />
+      <svg
+        className="d3-component"
+        width={'100%'}
+        height={'100%'}
+        ref={d3Container}
+      />
+    </div>
   );
 }
 
@@ -52,7 +78,7 @@ const drag = (simulation) => {
     .on('end', dragended);
 };
 
-const buildChart = (svg) => {
+const buildChart = (svg, data) => {
   const height = 1200;
   const width = 1800;
   const links = data.links.map((d) => Object.create(d));
@@ -68,7 +94,7 @@ const buildChart = (svg) => {
         .id((d) => d.id)
         .distance(90)
     )
-    .force('charge', d3.forceManyBody().strength(-180))
+    .force('charge', d3.forceManyBody().strength(-60))
     .force('center', d3.forceCenter(width / 2, height / 2));
 
   svg.attr('viewBox', [0, 0, width, height]);
@@ -131,7 +157,7 @@ const buildChart = (svg) => {
   return svg;
 };
 
-const data = {
+const initData = {
   nodes: [
     { id: 'Myriel', group: 1 },
     { id: 'Napoleon', group: 1 },
